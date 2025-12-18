@@ -6,6 +6,9 @@ import cors from 'cors'
 import authRouter from './src/routes/auth.route.js'
 import { errorHandler } from './src/middlewares/error.middleware.js'
 import ingredientsRouter from './src/routes/ingredients.routes.js'
+import productRouter from './src/routes/products.routes.js';
+import orderRouter from './src/routes/order.routes.js'
+
 
 const app = express()
 
@@ -19,6 +22,8 @@ app.use(express.json());
 // ROUTES
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/ingredients', ingredientsRouter)
+app.use('/api/v1/products', productRouter);
+app.use('/api/v1/orders', orderRouter)
 
 
 
