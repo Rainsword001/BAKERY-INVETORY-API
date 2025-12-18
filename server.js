@@ -8,6 +8,9 @@ import { errorHandler } from './src/middlewares/error.middleware.js'
 import ingredientsRouter from './src/routes/ingredients.routes.js'
 import productRouter from './src/routes/products.routes.js';
 import orderRouter from './src/routes/order.routes.js'
+import swaggerUI from 'swagger-ui-express';
+import swaggerSpec from './src/config/swagger.js'
+import './src/jobs/lowStock.job.js';
 
 
 const app = express()
@@ -17,6 +20,7 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 
+app.use('/api/docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
 
 // ROUTES
@@ -27,7 +31,6 @@ app.use('/api/v1/orders', orderRouter)
 
 
 
-
 // error middleware
 app.use(errorHandler);
 
@@ -35,4 +38,5 @@ app.use(errorHandler);
 app.listen(PORT, async() =>{
     await DB();
     console.log(`server is running`)
-})
+});
+

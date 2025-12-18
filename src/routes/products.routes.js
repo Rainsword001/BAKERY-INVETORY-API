@@ -1,13 +1,13 @@
 import { Router } from "express";
 
-const {
+import  {
   createProduct,
   getProducts,
   updateProduct,
   deleteProduct,
   sellProducts,
-} = require("../controllers/products.controller.js");
-const { protect, admin } = require("../middlewares/auth.middleware.js");
+} from '../controllers/products.controller.js'
+import { protect, admin } from "../middlewares/auth.middleware.js";
 
 const productRouter = Router()
 
