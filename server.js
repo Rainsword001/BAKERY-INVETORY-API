@@ -1,0 +1,33 @@
+import express from 'express'
+import { PORT } from './src/config/env.js'
+import { DB } from './src/database/db.js'
+import morgan from 'morgan'
+import cors from 'cors'
+import authRouter from './src/routes/auth.route.js'
+import { errorHandler } from './src/middlewares/error.middleware.js'
+import ingredientsRouter from './src/routes/ingredients.routes.js'
+
+const app = express()
+
+//middlewares
+app.use(cors());
+app.use(morgan('dev'));
+app.use(express.json());
+
+
+
+// ROUTES
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/ingredients', ingredientsRouter)
+
+
+
+
+// error middleware
+app.use(errorHandler);
+
+// start server
+app.listen(PORT, async() =>{
+    await DB();
+    console.log(`server is running`)
+})
