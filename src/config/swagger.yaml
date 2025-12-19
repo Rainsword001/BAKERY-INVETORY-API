@@ -1,0 +1,432 @@
+openapi: 3.0.0
+info:
+  title: Bakery Inventory API
+  version: 1.0.0
+  description: >
+    Production-ready API for managing bakery products, ingredients, and orders.
+    Features include authentication, role-based access control, transaction-safe sales,
+    audit logs, pagination, search, and error handling.
+servers:
+  - url: http://localhost:4000/api/docs
+tags:
+  - name: Auth
+    description: User registration and login endpoints
+  - name: Ingredients
+    description: Manage ingredients, stock levels, and reorder alerts
+  - name: Products
+    description: Manage bakery products, recipes, and sales
+  - name: Orders
+    description: Create and track incoming and outgoing orders
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Ingredient:
+      type: object
+      required: [name, unit]
+      properties:
+        _id: { type: string }
+        name: { type: string }
+        quantity: { type: number }
+        unit: { type: string }
+        reorderLevel: { type: number }
+    Product:
+      type: object
+      required: [name]
+      properties:
+        _id: { type: string }
+        name: { type: string }
+        price: { type: number }
+        stock: { type: number }
+        recipe:
+          type: array
+          items:
+            type: object
+            properties:
+              ingredient: { type: string }
+              qty: { type: number }
+    Order:
+      type: object
+      required: [type, items]
+      properties:
+        _id: { type: string }
+        type:
+          type: string
+          enum: [incoming, outgoing]
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product: { type: string }
+              quantity: { type: number }
+        totalAmount: { type: number }
+        createdBy: { type: string }
+    ErrorResponse:
+      type: object
+      properties:
+        message: { type: string }
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Create a new staff or admin user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string }
+                password: { type: string }
+                role: { type: string }
+            example:
+              name: "John Doe"
+              email: "john@example.com"
+              password: "Password123!"
+              role: "staff"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              example:
+                _id: "6483f1a0b2e4f1234567890a"
+                name: "John Doe"
+                email: "john@example.com"
+                role: "staff"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              example:
+                message: "Email already exists"
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      description: Authenticate and receive a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+            example:
+              email: "john@example.com"
+              password: "Password123!"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              example:
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              example:
+                message: "Invalid email or password"
+
+  /ingredients:
+    get:
+      tags: [Ingredients]
+      summary: Get all ingredients
+      description: Retrieve a paginated list of ingredients. Supports search.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        "200":
+          description: Paginated ingredients
+          content:
+            application/json:
+              example:
+                page: 1
+                pages: 2
+                total: 15
+                data:
+                  - _id: "64f2a1c1a1b2c3d4e5f6g7h8"
+                    name: "Flour"
+                    quantity: 100
+                    unit: "kg"
+                    reorderLevel: 20
+                  - _id: "64f2a1c1a1b2c3d4e5f6g7h9"
+                    name: "Sugar"
+                    quantity: 50
+                    unit: "kg"
+                    reorderLevel: 10
+    post:
+      tags: [Ingredients]
+      summary: Create ingredient (Admin only)
+      description: Add a new ingredient to the inventory.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Ingredient"
+            example:
+              name: "Butter"
+              quantity: 20
+              unit: "kg"
+              reorderLevel: 5
+      responses:
+        "201":
+          description: Ingredient created
+          content:
+            application/json:
+              example:
+                _id: "64f2b2c2b2c3d4e5f6g7h8i9"
+                name: "Butter"
+                quantity: 20
+                unit: "kg"
+                reorderLevel: 5
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              example:
+                message: "Admin access required"
+
+  /ingredients/{id}:
+    put:
+      tags: [Ingredients]
+      summary: Update ingredient
+      description: Update ingredient details.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Ingredient"
+            example:
+              quantity: 120
+      responses:
+        "200":
+          description: Ingredient updated successfully
+        "404":
+          description: Ingredient not found
+
+  /products:
+    get:
+      tags: [Products]
+      summary: Get all products
+      description: Retrieve products with price, stock, and recipes. Supports pagination and search.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        "200":
+          description: Paginated products
+          content:
+            application/json:
+              example:
+                page: 1
+                pages: 1
+                total: 3
+                data:
+                  - _id: "64f2c3d3c3d4e5f6g7h8i9j0"
+                    name: "Chocolate Cake"
+                    price: 15
+                    stock: 10
+                    recipe:
+                      - ingredient: "Flour"
+                        qty: 2
+                      - ingredient: "Sugar"
+                        qty: 1
+
+    post:
+      tags: [Products]
+      summary: Create a new product (Admin only)
+      description: Add a new product with recipe details.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Product"
+            example:
+              name: "Vanilla Cupcake"
+              price: 2
+              stock: 50
+              recipe:
+                - ingredient: "Flour"
+                  qty: 1
+                - ingredient: "Sugar"
+                  qty: 0.5
+      responses:
+        "201": { description: Product created successfully }
+
+  /products/{id}:
+    put:
+      tags: [Products]
+      summary: Update product
+      description: Update product details such as price, stock, or recipe.
+      security:
+        - BearerAuth: []
+    delete:
+      tags: [Products]
+      summary: Delete product (Admin only)
+      description: Remove a product from inventory.
+      security:
+        - BearerAuth: []
+
+  /products/sell:
+    post:
+      tags: [Products]
+      summary: Sell products
+      description: >
+        Deduct product stock and ingredient quantities for sales.
+        Returns updated stock and ingredient levels.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product: { type: string }
+                      quantity: { type: number }
+            example:
+              items:
+                - product: "64f2c3d3c3d4e5f6g7h8i9j0"
+                  quantity: 2
+                - product: "64f2c3d3c3d4e5f6g7h8i9j1"
+                  quantity: 5
+      responses:
+        "200":
+          description: Sale recorded successfully
+          content:
+            application/json:
+              example:
+                message: "Sale recorded successfully"
+                productsUpdated:
+                  - productId: "64f2c3d3c3d4e5f6g7h8i9j0"
+                    name: "Chocolate Cake"
+                    stockBefore: 10
+                    stockAfter: 8
+                  - productId: "64f2c3d3c3d4e5f6g7h8i9j1"
+                    name: "Croissant"
+                    stockBefore: 25
+                    stockAfter: 20
+                ingredientsDeducted:
+                  - ingredient: "Flour"
+                    qtyBefore: 50
+                    qtyAfter: 43
+                  - ingredient: "Sugar"
+                    qtyBefore: 20
+                    qtyAfter: 18
+                  - ingredient: "Butter"
+                    qtyBefore: 10
+                    qtyAfter: 7.5
+        "400":
+          description: Insufficient stock
+
+  /orders:
+    get:
+      tags: [Orders]
+      summary: Get all orders
+      description: Paginated list of orders with items, total amounts, and creator.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              example:
+                page: 1
+                pages: 1
+                total: 2
+                data:
+                  - _id: "64f2e5f5e5f6g7h8i9j0k1l2"
+                    type: "outgoing"
+                    items:
+                      - product: "64f2c3d3c3d4e5f6g7h8i9j0"
+                        quantity: 2
+                    totalAmount: 30
+                    createdBy: "6483f1a0b2e4f1234567890a"
+
+    post:
+      tags: [Orders]
+      summary: Create a new order
+      description: Record an incoming or outgoing order with items and total amount.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Order"
+            example:
+              type: "outgoing"
+              items:
+                - product: "64f2c3d3c3d4e5f6g7h8i9j0"
+                  quantity: 2
+              totalAmount: 30
+      responses:
+        "201": { description: Order created successfully }
+        "400": { description: Bad request }

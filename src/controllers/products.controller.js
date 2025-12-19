@@ -61,6 +61,36 @@ export const updateProduct = async (req, res) => {
 };
 
 
+export const getProducts = async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+    const skip = (page - 1) * limit;
+    const search = req.query.search
+      ? { name: { $regex: req.query.search, $options: 'i' } }
+      : {};
+
+    const [products, total] = await Promise.all([
+      Product.find(search)
+        .populate('recipe.ingredient', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Product.countDocuments(search)
+    ]);
+
+    res.json({
+      page,
+      pages: Math.ceil(total / limit),
+      total,
+      data: products
+    });
+  } catch (error) {
+    console.error('Get products error:', error);
+    res.status(500).json({ message: 'Failed to fetch products' });
+  }
+};
+
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;

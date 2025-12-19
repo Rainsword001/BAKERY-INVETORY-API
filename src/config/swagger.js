@@ -10,7 +10,7 @@ version: '1.0.0',
 description: 'API documentation for Bakery Inventory System'
 },
 servers: [
-{ url: 'http://localhost:4000' }
+{ url: 'http://localhost:4000/api/v1' }
 ],
 components: {
 securitySchemes: {
