@@ -1,4 +1,3 @@
-import { name } from "ejs";
 import Ingredient from "../models/ingredient.model.js";
 import mongoose from "mongoose";
 
